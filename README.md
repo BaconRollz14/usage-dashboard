@@ -11,20 +11,20 @@ It reads the logins Claude Code and Codex already saved on the server and asks A
 1. **Log in on the server** (one-off, as your normal user, not root):
    - Claude Code: run `claude` and sign in with your subscription.
    - Codex, on a headless server: run `codex login --device-auth`, then open the link it prints on your phone or laptop and enter the code.
-     Alternative: log in with `codex login` on your laptop and copy `~/.codex/auth.json` into `~/.codex/` on the server.
+     No Codex installed? Docker can run it once just for the login:
+     `mkdir -p ~/.codex && docker run --rm -it -u $(id -u):$(id -g) -e HOME=/tmp -e CODEX_HOME=/codex -v ~/.codex:/codex node:22-alpine npx -y @openai/codex login --device-auth`
 2. **Get the code:** `git clone https://github.com/BaconRollz14/usage-dashboard && cd usage-dashboard`
 3. **Configure:** `cp .env.example .env`, then edit `.env`:
    - `CLAUDE_HOME` / `CODEX_HOME`: the full paths to `.claude` and `.codex` in your home folder (e.g. `/home/matt/.claude`).
    - `PUID` / `PGID`: the output of `id -u` and `id -g`.
-   - `DASHBOARD_PASSWORD`: strongly recommended.
 4. **Start it:** `docker compose up -d --build`
-5. Open `http://<server-ip>:8787`.
+5. Open `http://localhost:8787` on the server, or put it behind your own reverse proxy or tunnel.
 
 To update later: `git pull && docker compose up -d --build`.
 
 ## Things to know
 
-- **Keep it private.** The container can read your Claude and Codex logins. Keep it on your home network, behind your VPN or behind your existing reverse-proxy login, and set a password. Don't port-forward it to the internet.
+- **Keep it private.** The dashboard has no login of its own, and the container can read your Claude and Codex logins. Only expose it through something that asks you to log in first (e.g. Cloudflare Access). Never open its port straight to the internet.
 - **Login renewal.** Logins expire after a few hours. When one does, the dashboard renews it and saves the new login back to the same file, so Claude Code and Codex keep working too. If you'd rather it only ever reads your logins, set `ALLOW_TOKEN_REFRESH=false`. It will then show "expired" until you next use the CLI on the server.
 - **Only one card set up?** That's fine. The other card shows what's missing and how to fix it.
 - **The black tick on each bar** marks how far through the window you are. If the coloured fill is past it, you're on course to hit the limit before it resets.

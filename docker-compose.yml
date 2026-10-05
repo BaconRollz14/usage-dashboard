@@ -6,10 +6,11 @@ services:
     # Run as the same user that owns your Claude/Codex logins, so the
     # dashboard can read them and save renewed logins back.
     user: "${PUID:-1000}:${PGID:-1000}"
+    # Only reachable from the server itself by default. Docker-published
+    # ports skip the host firewall, so don't widen this on a public server.
     ports:
-      - "${PORT:-8787}:8787"
+      - "${PORT:-127.0.0.1:8787}:8787"
     environment:
-      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-}
       - REFRESH_SECONDS=${REFRESH_SECONDS:-60}
       - ALLOW_TOKEN_REFRESH=${ALLOW_TOKEN_REFRESH:-true}
       - TZ=${TZ:-Europe/London}
