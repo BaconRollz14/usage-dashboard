@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Usage Limits</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='18' width='6' height='10' rx='2' fill='%233b6fd8'/><rect x='13' y='11' width='6' height='17' rx='2' fill='%233b6fd8'/><rect x='22' y='4' width='6' height='24' rx='2' fill='%233b6fd8'/></svg>">
+<style>
+  :root {
+    --bg: #f6f6f4;
+    --surface: #ffffff;
+    --border: #e4e4e0;
+    --ink: #1a1a19;
+    --ink-2: #55554f;
+    --ink-3: #85857d;
+    --track: #dde6f8;
+    --fill: #3b6fd8;
+    --pace: #1a1a19;
+    --warning: #fab219;
+    --warning-track: #fdeccb;
+    --critical: #d03b3b;
+    --critical-track: #f6d8d8;
+    --good-ink: #006300;
+    --warn-ink: #8a5a00;
+    --crit-ink: #b02a2a;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121211;
+      --surface: #1a1a19;
+      --border: #2c2c2a;
+      --ink: #f1f1ee;
+      --ink-2: #b9b9b2;
+      --ink-3: #8a8a83;
+      --track: #24314d;
+      --fill: #6b97ec;
+      --pace: #f1f1ee;
+      --warning-track: #4a3a12;
+      --critical-track: #4a2020;
+      --good-ink: #5fcf5f;
+      --warn-ink: #fab219;
+      --crit-ink: #f07a7a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 24px 16px 40px;
+  }
+  main { max-width: 980px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { font-size: 20px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  .meta { color: var(--ink-3); font-size: 13px; display: flex; gap: 12px; align-items: center; }
+  button {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--ink-3); }
+  button:disabled { opacity: .5; cursor: default; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .card h2 { font-size: 17px; margin: 0; font-weight: 650; }
+  .plan { font-size: 12px; color: var(--ink-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
+  .window + .window { margin-top: 22px; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .label { color: var(--ink-2); font-size: 14px; }
+  .pct { font-size: 32px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; }
+  .pct small { font-size: 14px; font-weight: 500; color: var(--ink-3); margin-left: 2px; }
+  .bar { position: relative; height: 10px; border-radius: 5px; background: var(--track); margin: 8px 0 8px; overflow: visible; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: var(--fill); min-width: 4px; transition: width .4s ease; }
+  .window.warn .bar { background: var(--warning-track); }
+  .window.warn .fill { background: var(--warning); }
+  .window.crit .bar { background: var(--critical-track); }
+  .window.crit .fill { background: var(--critical); }
+  .bar .pace { position: absolute; top: -4px; bottom: -4px; width: 2px; border-radius: 1px; background: var(--pace); box-shadow: 0 0 0 2px var(--surface); }
+  .sub { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--ink-3); }
+  .status { font-weight: 550; }
+  .status.ok { color: var(--good-ink); }
+  .status.warn { color: var(--warn-ink); }
+  .status.crit { color: var(--crit-ink); }
+  .notice { font-size: 13px; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; background: var(--critical-track); color: var(--ink); }
+  .notice.stale { background: var(--warning-track); }
+  .notes { margin-top: 18px; font-size: 13px; color: var(--ink-2); }
+  .empty { color: var(--ink-3); font-size: 14px; }
+  .legend { margin-top: 20px; font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; width: 2px; height: 12px; background: var(--pace); border-radius: 1px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>AI usage limits</h1>
+    <div class="meta">
+      <span id="updated">Loading…</span>
+      <button id="refresh" type="button">Refresh</button>
+    </div>
+  </header>
+  <div class="grid" id="cards"></div>
+  <p class="legend"><i></i> Even-pace marker: how far through the window you are. Fill past it means you're using it faster than it resets.</p>
+</main>
+<script>
+  const cardsEl = document.getElementById('cards');
+  const updatedEl = document.getElementById('updated');
+  const refreshBtn = document.getElementById('refresh');
+  let lastLoaded = null;
+  let data = null;
+  let loadError = null;
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function untilText(iso) {
+    if (!iso) return '';
+    const ms = new Date(iso) - Date.now();
+    if (ms <= 0) return 'resetting now';
+    const m = Math.round(ms / 60000);
+    const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60;
+    const parts = d ? [`${d}d`, `${h}h`] : h ? [`${h}h`, `${mm}m`] : [`${mm}m`];
+    return `resets in ${parts.join(' ')}`;
+  }
+
+  function whenText(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return sameDay ? time : `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })} ${time}`;
+  }
+
+  function level(pct) {
+    if (pct >= 90) return { cls: 'crit', text: pct >= 100 ? '⛔ Limit reached' : '▲ Nearly out' };
+    if (pct >= 70) return { cls: 'warn', text: '▲ Getting high' };
+    return { cls: 'ok', text: '● Plenty left' };
+  }
+
+  function paceFraction(w) {
+    if (!w.resetsAt || !w.windowSeconds) return null;
+    const left = (new Date(w.resetsAt) - Date.now()) / 1000;
+    const f = 1 - left / w.windowSeconds;
+    return f >= 0 && f <= 1 ? f : null;
+  }
+
+  function windowHtml(w) {
+    const pct = Math.max(0, Math.min(100, w.usedPercent));
+    const lv = level(w.usedPercent);
+    const pace = paceFraction(w);
+    const shown = Math.round(w.usedPercent);
+    const tip = `${w.label}: ${w.usedPercent.toFixed(1)}% used` + (w.resetsAt ? `, resets ${whenText(w.resetsAt)}` : '') + (pace != null ? `. ${Math.round(pace * 100)}% of the window has passed.` : '');
+    return `
+      <div class="window ${lv.cls === 'ok' ? '' : lv.cls}" title="${esc(tip)}">
+        <div class="row">
+          <span class="label">${esc(w.label)}</span>
+          <span class="pct">${shown}<small>% used</small></span>
+        </div>
+        <div class="bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${shown}" aria-label="${esc(w.label)}">
+          <div class="fill" style="width:${pct}%"></div>
+          ${pace != null ? `<div class="pace" style="left:calc(${(pace * 100).toFixed(2)}% - 1px)"></div>` : ''}
+        </div>
+        <div class="sub">
+          <span class="status ${lv.cls}">${lv.text}</span>
+          <span>${esc(untilText(w.resetsAt))}${w.resetsAt ? ` · ${esc(whenText(w.resetsAt))}` : ''}</span>
+        </div>
+      </div>`;
+  }
+
+  function cardHtml(p) {
+    const notice = p.error
+      ? `<div class="notice ${p.stale ? 'stale' : ''}">${p.stale ? 'Showing last known numbers. ' : ''}${esc(p.error)}</div>`
+      : '';
+    const body = p.windows.length
+      ? p.windows.map(windowHtml).join('')
+      : (p.ok ? '<p class="empty">No limits reported.</p>' : '');
+    const notes = p.notes?.length ? `<div class="notes">${p.notes.map(esc).join(' · ')}</div>` : '';
+    return `
+      <section class="card">
+        <div class="card-head">
+          <h2>${esc(p.name)}</h2>
+          ${p.plan ? `<span class="plan">${esc(p.plan)}</span>` : ''}
+        </div>
+        ${notice}${body}${notes}
+      </section>`;
+  }
+
+  function render() {
+    if (data) cardsEl.innerHTML = data.providers.map(cardHtml).join('');
+    if (loadError) {
+      updatedEl.textContent = `Couldn't reach the dashboard server (${loadError})`;
+    } else if (lastLoaded) {
+      const s = Math.round((Date.now() - lastLoaded) / 1000);
+      updatedEl.textContent = s < 5 ? 'Updated just now' : s < 60 ? `Updated ${s}s ago` : `Updated ${Math.round(s / 60)}m ago`;
+    }
+  }
+
+  async function load(force = false) {
+    refreshBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/usage${force ? '?force=1' : ''}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Server replied ${res.status}`);
+      data = await res.json();
+      lastLoaded = Date.now();
+      loadError = null;
+    } catch (err) {
+      loadError = err.message;
+    } finally {
+      refreshBtn.disabled = false;
+      render();
+    }
+  }
+
+  refreshBtn.addEventListener('click', () => load(true));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  setInterval(() => { if (!document.hidden) load(); }, 60000);
+  setInterval(render, 15000);
+  load();
+</script>
+</body>
+</html>
