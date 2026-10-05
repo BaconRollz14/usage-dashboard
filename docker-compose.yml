@@ -1,0 +1,18 @@
+services:
+  usage-dashboard:
+    build: .
+    container_name: usage-dashboard
+    restart: unless-stopped
+    # Run as the same user that owns your Claude/Codex logins, so the
+    # dashboard can read them and save renewed logins back.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-}
+      - REFRESH_SECONDS=${REFRESH_SECONDS:-60}
+      - ALLOW_TOKEN_REFRESH=${ALLOW_TOKEN_REFRESH:-true}
+      - TZ=${TZ:-Europe/London}
+    volumes:
+      - ${CLAUDE_HOME:?Set CLAUDE_HOME in .env}:/data/claude
+      - ${CODEX_HOME:?Set CODEX_HOME in .env}:/data/codex

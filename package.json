@@ -1,0 +1,12 @@
+{
+  "name": "usage-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live usage limits for Claude Code and Codex subscriptions",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}
