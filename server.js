@@ -1,6 +1,5 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { timingSafeEqual, createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +10,6 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT ?? 8787);
 const CACHE_SECONDS = Math.max(30, Number(process.env.REFRESH_SECONDS ?? 60));
-const PASSWORD = process.env.DASHBOARD_PASSWORD ?? '';
 const allowRefresh = (process.env.ALLOW_TOKEN_REFRESH ?? 'true') !== 'false';
 
 const providers = [
@@ -50,16 +48,6 @@ async function getProvider(p, force) {
   return entry.inflight;
 }
 
-function authorised(req) {
-  if (!PASSWORD) return true;
-  const header = req.headers.authorization ?? '';
-  if (!header.startsWith('Basic ')) return false;
-  const supplied = Buffer.from(header.slice(6), 'base64').toString('utf8').split(':').slice(1).join(':');
-  const a = createHash('sha256').update(supplied).digest();
-  const b = createHash('sha256').update(PASSWORD).digest();
-  return timingSafeEqual(a, b);
-}
-
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
 
@@ -67,11 +55,6 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'text/plain' }).end('ok');
     return;
   }
-  if (!authorised(req)) {
-    res.writeHead(401, { 'www-authenticate': 'Basic realm="Usage dashboard"', 'content-type': 'text/plain' }).end('Password required');
-    return;
-  }
-
   try {
     if (url.pathname === '/api/usage') {
       const force = url.searchParams.get('force') === '1';
@@ -93,5 +76,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Usage dashboard on http://0.0.0.0:${PORT} (cache ${CACHE_SECONDS}s, token renewal ${allowRefresh ? 'on' : 'off'}, password ${PASSWORD ? 'on' : 'off'})`);
+  console.log(`Usage dashboard on http://0.0.0.0:${PORT} (cache ${CACHE_SECONDS}s, token renewal ${allowRefresh ? 'on' : 'off'})`);
 });
